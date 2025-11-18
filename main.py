@@ -16,7 +16,11 @@ TARGET_LANG = 'es'
 # MODEL_NAME = f'Helsinki-NLP/opus-mt-{SOURCE_LANG}-{TARGET_LANG}'
 # This model auto-detects many languages and translates to English
 MODEL_NAME = 'Helsinki-NLP/opus-mt-mul-en'
-OCR_LANG = ['en', 'es', 'fr', 'hi']
+# --- OLD (Broken) ---
+# OCR_LANG = ['en', 'hi'] 
+
+# --- NEW (Fixed) ---
+OCR_LANG = ['hi', 'en']
 PROCESSING_WIDTH = 800
 
 # --- LOAD MODELS ON STARTUP ---
