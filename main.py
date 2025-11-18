@@ -16,8 +16,6 @@ TARGET_LANG = 'es'
 # MODEL_NAME = f'Helsinki-NLP/opus-mt-{SOURCE_LANG}-{TARGET_LANG}'
 # This model auto-detects many languages and translates to English
 MODEL_NAME = 'Helsinki-NLP/opus-mt-mul-en'
-# --- OLD (Broken) ---
-# OCR_LANG = ['en', 'hi'] 
 
 # --- NEW (Fixed) ---
 OCR_LANG = ['hi', 'en']
@@ -70,8 +68,8 @@ async def translate_image(file: UploadFile = File(...)):
         results = reader.readtext(
             frame_rgb, 
             batch_size=5, 
-            x_ths=1.5,
-            # y_ths=0.5
+            x_ths=1.0,
+            y_ths=0.5
         )
         
         processed_results = []
