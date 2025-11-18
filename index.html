@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Translator</title>
+    
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #111827;
+            color: #F3F4F6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 16px;
+            margin: 0;
+        }
+        h1 {
+            font-size: 2.25rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        p {
+            margin-bottom: 0.5rem;
+            color: #9CA3AF;
+        }
+        /* --- NEW BUTTON STYLE --- */
+        #toggleButton {
+            background-color: #10B981; /* Green */
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            transition: background-color 0.2s;
+        }
+        #toggleButton:hover {
+            background-color: #059669;
+        }
+        #toggleButton.stop {
+            background-color: #EF4444; /* Red */
+        }
+        #toggleButton.stop:hover {
+            background-color: #DC2626;
+        }
+        /* --- END BUTTON STYLE --- */
+        #canvas-container {
+            width: 100%;
+            max-width: 896px;
+            margin: 0 auto;
+            padding: 8px;
+            background-color: #1F2937;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        canvas { 
+            max-width: 100%; 
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem; 
+            /* Start with a black background */
+            background-color: #000;
+        }
+        #status {
+            margin-top: 1rem;
+            font-size: 1.125rem;
+            color: #FCD34D;
+        }
+        video {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Real-time AR Translator</h1>
+    
+    <!-- NEW BUTTON -->
+    <button id="toggleButton">Start Camera</button>
+    
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <p id="status">Click "Start Camera" to begin.</p>
+    
+    <video id="video" playsinline autoplay muted></video>
+
+    <script>
+        // --- CONFIGURATION ---
+        const BACKEND_URL = "http://127.0.0.1:8000/translate/"; 
+        const PROCESSING_WIDTH = 800; 
+        const PROCESS_EVERY_N_FRAMES = 10; // Kept this high for stability
+        const FONT_SIZE = 20;
+        const FONT_STYLE = `${FONT_SIZE}px Arial`;
+        const TEXT_COLOR = "black";
+        const BOX_COLOR = "white";
+        
+        // --- SCRIPT ---
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const statusEl = document.getElementById('status');
+        const toggleButton = document.getElementById('toggleButton');
+        
+        let frameCount = 0;
+        let lastResults = [];
+        let isProcessing = false;
+
+        // --- NEW: Global state variables ---
+        let currentStream = null;
+        let animationFrameId = null;
+
+        // --- NEW: Toggle function ---
+        toggleButton.addEventListener('click', () => {
+            if (currentStream) {
+                stopWebcam();
+            } else {
+                startWebcam();
+            }
+        });
+
+        async function startWebcam() {
+            if (currentStream) return; // Already running
+
+            try {
+                statusEl.innerText = "Starting webcam...";
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        width: { ideal: 1280 },
+                        facingMode: 'environment'
+                    }
+                });
+                video.srcObject = currentStream;
+                
+                video.oncanplay = () => {
+                    video.play();
+                };
+                
+                video.onloadedmetadata = () => {
+                    const aspectRatio = video.videoHeight / video.videoWidth;
+                    canvas.width = PROCESSING_WIDTH;
+                    canvas.height = PROCESSING_WIDTH * aspectRatio;
+                    statusEl.innerText = "Webcam active. Point at text!";
+                    
+                    // Update button
+                    toggleButton.innerText = "Stop Camera";
+                    toggleButton.classList.add("stop");
+                    
+                    // Start the main loop
+                    processFrame(); 
+                };
+            } catch (err) {
+                console.error("Error starting webcam: ", err);
+                if (err.name === "NotAllowedError") {
+                    statusEl.innerText = "Error: Webcam permission denied.";
+                } else {
+                    statusEl.innerText = "Error: Could not start webcam.";
+                }
+                currentStream = null;
+            }
+        }
+
+        // --- NEW: Stop function ---
+        function stopWebcam() {
+            if (!currentStream) return; // Already stopped
+
+            // Stop all video tracks
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+            video.srcObject = null;
+            
+            // Stop the animation loop
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
+            // Clear the canvas
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            lastResults = [];
+            
+            // Update UI
+            statusEl.innerText = "Webcam off. Click 'Start Camera' to begin.";
+            toggleButton.innerText = "Start Camera";
+            toggleButton.classList.remove("stop");
+        }
+
+
+        async function processFrame() {
+            // Stop if the stream has been cancelled
+            if (!currentStream) return; 
+            
+            if (video.readyState < 2 || video.paused) {
+                animationFrameId = requestAnimationFrame(processFrame);
+                return;
+            }
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            frameCount++;
+            
+            if (frameCount % PROCESS_EVERY_N_FRAMES === 0 && !isProcessing) {
+                getTranslation(); 
+            }
+            
+            drawResults();
+            animationFrameId = requestAnimationFrame(processFrame);
+        }
+
+        async function getTranslation() {
+            isProcessing = true; 
+            statusEl.innerText = "Translating...";
+            
+            try {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (!blob) throw new Error("Canvas toBlob failed.");
+
+                const formData = new FormData();
+                formData.append("file", blob, "frame.png");
+                
+                const response = await fetch(BACKEND_URL, {
+                    method: "POST",
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error(`Backend error: ${response.statusText}`);
+                
+                const results = await response.json();
+                if (results.error) throw new Error(results.error);
+                
+                lastResults = results;
+                if(currentStream) statusEl.innerText = "Webcam active. Point at text!";
+                
+            } catch (err) {
+                console.error("Translation failed: ", err);
+                if(currentStream) statusEl.innerText = "Translation failed. Retrying...";
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        function drawResults() {
+            for (const result of lastResults) {
+                const [tl, br, text] = [result.tl, result.br, result.text];
+                ctx.fillStyle = BOX_COLOR;
+                ctx.fillRect(tl[0], tl[1], br[0] - tl[0], br[1] - tl[1]);
+                ctx.fillStyle = TEXT_COLOR;
+                ctx.font = FONT_STYLE;
+                ctx.fillText(text, tl[0] + 2, tl[1] + FONT_SIZE);
+            }
+        }
+        
+        // --- REMOVED: Don't start automatically ---
+        // startWebcam();
+    </script>
+</body>
+</html>
