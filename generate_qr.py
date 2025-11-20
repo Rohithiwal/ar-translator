@@ -3,7 +3,8 @@ import qrcode
 # --- CONFIGURATION ---
 # Replace this with your AWS Public IP address
 # Make sure to include http:// and :8000
-WEBSITE_URL = "https://subeffectively-premegalithic-karlee.ngrok-free.dev" 
+# WEBSITE_URL = "https://subeffectively-premegalithic-karlee.ngrok-free.dev" 
+WEBSITE_URL = "http://localhost:8000" 
 
 # --- GENERATE QR CODE ---
 qr = qrcode.QRCode(

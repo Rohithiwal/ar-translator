@@ -1,11 +1,5 @@
-opencv-python
-easyocr
-torch
-transformers
-Pillow
-numpy
-sentencepiece
-sacremoses
-fastapi 
+fastapi
 uvicorn[standard]
 python-multipart
+google-cloud-vision
+google-cloud-translate

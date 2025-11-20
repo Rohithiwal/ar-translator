@@ -3,33 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Translator</title>
+    <title>AR Translator (Local)</title>
+    
     <style>
-        body { font-family: Arial, sans-serif; background-color: #111827; color: #F3F4F6; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 16px; margin: 0; }
-        h1 { font-size: 2.25rem; font-weight: bold; margin-bottom: 1rem; }
-        #toggleButton { background-color: #10B981; color: white; font-size: 1rem; font-weight: bold; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; margin-bottom: 1rem; }
-        #toggleButton.stop { background-color: #EF4444; }
-        #canvas-container { width: 100%; max-width: 896px; margin: 0 auto; background-color: #1F2937; border-radius: 0.5rem; }
-        canvas { max-width: 100%; width: 100%; height: auto; background-color: #000; border-radius: 0.5rem; }
-        #status { margin-top: 1rem; color: #FCD34D; }
+        /* --- STANDARD STYLES --- */
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #111827; /* Dark gray */
+            color: #F3F4F6; /* Light gray */
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 16px; 
+            margin: 0; 
+        }
+        h1 { 
+            font-size: 2.25rem; 
+            font-weight: bold; 
+            margin-bottom: 1rem; 
+        }
+        .subtitle {
+            color: #9CA3AF; 
+            margin-bottom: 20px; 
+            font-size: 1rem; 
+        }
+        #toggleButton { 
+            background-color: #10B981; /* Green */
+            color: white; 
+            font-size: 1rem; 
+            font-weight: bold; 
+            padding: 0.75rem 1.5rem; 
+            border: none; 
+            border-radius: 0.5rem; 
+            cursor: pointer; 
+            margin-bottom: 1rem; 
+            transition: background-color 0.2s; 
+        }
+        #toggleButton:hover { background-color: #059669; }
+        #toggleButton.stop { background-color: #EF4444; /* Red */ }
+        #toggleButton.stop:hover { background-color: #DC2626; }
+        
+        #canvas-container { 
+            width: 100%; 
+            max-width: 896px; 
+            margin: 0 auto; 
+            padding: 8px; 
+            background-color: #1F2937; /* Gray 800 */
+            border-radius: 0.5rem; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+        }
+        canvas { 
+            max-width: 100%; 
+            width: 100%; 
+            height: auto; 
+            border-radius: 0.5rem; 
+            background-color: #000;
+        }
+        #status { 
+            margin-top: 1rem; 
+            font-size: 1.125rem; 
+            color: #FCD34D; /* Yellow 400 */
+        }
         video { display: none; }
     </style>
 </head>
 <body>
-    <h1>Real-time AR Translator</h1>
+
+    <h1>AR Translator</h1>
+    <div class="subtitle">Running Locally with Google AI</div>
+    
     <button id="toggleButton">Start Camera</button>
-    <div id="canvas-container"><canvas id="canvas"></canvas></div>
+    
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+    
     <p id="status">Click "Start Camera" to begin.</p>
+    
     <video id="video" playsinline autoplay muted></video>
 
     <script>
-        // --- FIXED: Automatically uses the AWS Public IP ---
+        // --- CONFIGURATION ---
         const BACKEND_URL = window.location.origin + "/translate/"; 
-        
         const PROCESSING_WIDTH = 800; 
-        const PROCESS_EVERY_N_FRAMES = 30; // Increased to 30 for smoother CPU performance
-        const FONT_SIZE = 18;
+        const PROCESS_EVERY_N_FRAMES = 30;
         
+        // --- VISUAL CONFIGURATION ---
+        const BOX_COLOR = "#000000"; // SOLID BLACK
+        const TEXT_COLOR = "#ffffff"; // White text
+        const BASE_FONT_SIZE = 24;
+        
+        // --- VARIABLES ---
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -42,28 +107,40 @@
         let currentStream = null;
         let animationFrameId = null;
 
+        // --- EVENT LISTENERS ---
         toggleButton.addEventListener('click', () => {
             if (currentStream) stopWebcam();
             else startWebcam();
         });
 
+        // --- WEBCAM LOGIC ---
         async function startWebcam() {
             try {
-                statusEl.innerText = "Starting webcam...";
-                currentStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, facingMode: 'environment' } });
+                statusEl.innerText = "Requesting camera...";
+                
+                // Use 'environment' for rear camera on phones
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, facingMode: 'environment' }
+                });
+                
                 video.srcObject = currentStream;
                 video.oncanplay = () => video.play();
+                
                 video.onloadedmetadata = () => {
+                    // Resize canvas to match video aspect ratio
+                    const aspectRatio = video.videoHeight / video.videoWidth;
                     canvas.width = PROCESSING_WIDTH;
-                    canvas.height = PROCESSING_WIDTH * (video.videoHeight / video.videoWidth);
-                    statusEl.innerText = "Webcam active.";
+                    canvas.height = PROCESSING_WIDTH * aspectRatio;
+                    
+                    statusEl.innerText = "Scanning...";
                     toggleButton.innerText = "Stop Camera";
                     toggleButton.classList.add("stop");
+                    
                     processFrame(); 
                 };
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = "Error: " + err.name;
+                statusEl.innerText = "Error: " + err.name + " (Check HTTPS)";
             }
         }
 
@@ -72,48 +149,137 @@
             currentStream.getTracks().forEach(track => track.stop());
             currentStream = null;
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            ctx.fillStyle = "black";
+            
+            // Clear canvas to black
+            ctx.fillStyle = "#000";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            statusEl.innerText = "Webcam off.";
+            
+            statusEl.innerText = "Stopped.";
             toggleButton.innerText = "Start Camera";
             toggleButton.classList.remove("stop");
         }
 
-        async function processFrame() {
+        // --- MAIN LOOP ---
+        function processFrame() {
             if (!currentStream) return;
+
             if (video.readyState < 2 || video.paused) {
                 animationFrameId = requestAnimationFrame(processFrame);
                 return;
             }
+
+            // Draw video to canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
             frameCount++;
-            if (frameCount % PROCESS_EVERY_N_FRAMES === 0 && !isProcessing) getTranslation();
+            if (frameCount % PROCESS_EVERY_N_FRAMES === 0 && !isProcessing) {
+                getTranslation();
+            }
+
             drawResults();
             animationFrameId = requestAnimationFrame(processFrame);
         }
 
+        // --- API CALL ---
         async function getTranslation() {
             isProcessing = true;
             statusEl.innerText = "Translating...";
+            
             try {
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
                 const formData = new FormData();
-                formData.append("file", blob, "frame.png");
-                const response = await fetch(BACKEND_URL, { method: "POST", body: formData });
-                if (!response.ok) throw new Error("Backend Error");
-                lastResults = await response.json();
-                if (currentStream) statusEl.innerText = "Webcam active.";
-            } catch (err) { console.error(err); } 
-            finally { isProcessing = false; }
+                formData.append("file", blob, "frame.jpg");
+                
+                // --- NGROK & CORS FIX ---
+                const response = await fetch(BACKEND_URL, { 
+                    method: "POST", 
+                    body: formData,
+                    headers: {
+                        "ngrok-skip-browser-warning": "true",
+                        "Accept": "application/json"
+                    },
+                    // 'cors' mode is default but good to be explicit
+                    mode: 'cors' 
+                });
+                
+                if (!response.ok) throw new Error(`Server: ${response.status}`);
+                
+                const results = await response.json();
+                if (results.error) throw new Error(results.error);
+                
+                lastResults = results;
+                if (currentStream) statusEl.innerText = "Active";
+                
+            } catch (err) {
+                console.error("Translation Error:", err);
+                // If error, keep trying silently or show brief message
+                if (currentStream) statusEl.innerText = "Retrying...";
+            } finally {
+                isProcessing = false;
+            }
         }
 
+        // --- DRAWING ---
         function drawResults() {
             for (const res of lastResults) {
-                ctx.fillStyle = "black";
-                ctx.fillRect(res.tl[0], res.tl[1], res.br[0]-res.tl[0], res.br[1]-res.tl[1]);
-                ctx.fillStyle = "white";
-                ctx.font = "20px Arial";
-                ctx.fillText(res.text, res.tl[0]+2, res.tl[1]+18);
+                const x = res.tl[0];
+                const y = res.tl[1];
+                const w = res.br[0] - res.tl[0];
+                const h = res.br[1] - res.tl[1];
+
+                // Draw Box (Solid Black)
+                ctx.fillStyle = BOX_COLOR;
+                ctx.fillRect(x, y, w, h);
+
+                // Draw Text (Scaled)
+                drawScaledWrappedText(ctx, res.text, x, y, w, h, BASE_FONT_SIZE);
+            }
+        }
+
+        function drawScaledWrappedText(context, text, x, y, maxWidth, maxHeight, initialFontSize) {
+            if (maxHeight < 10 || maxWidth < 10) return;
+            let fontSize = initialFontSize;
+            let lines = [];
+
+            // Find best font size
+            do {
+                context.font = `bold ${fontSize}px Arial`;
+                lines = [];
+                const words = text.split(' ');
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const word = words[i];
+                    const width = context.measureText(currentLine + " " + word).width;
+                    if (width < maxWidth - 8) { 
+                        currentLine += " " + word;
+                    } else {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+                lines.push(currentLine);
+
+                const lineHeight = fontSize * 1.2;
+                const totalHeight = lines.length * lineHeight;
+
+                if (totalHeight <= maxHeight - 4) break; 
+                fontSize -= 2;
+            } while (fontSize > 10); 
+
+            // Draw text centered vertically
+            context.fillStyle = TEXT_COLOR;
+            context.textBaseline = "top";
+            const lineHeight = fontSize * 1.2;
+            let currentY = y + (maxHeight - (lines.length * lineHeight)) / 2; 
+
+            for (let i = 0; i < lines.length; i++) {
+                // Draw text centered horizontally
+                const lineWidth = context.measureText(lines[i]).width;
+                const currentX = x + (maxWidth - lineWidth) / 2;
+                
+                context.fillText(lines[i], currentX, currentY);
+                currentY += lineHeight;
             }
         }
     </script>
