@@ -1,40 +1,48 @@
-# AR Translator
+# 📷 AR Translator
 
-A real-time Augmented Reality translation web app that uses your camera to detect text, translate it instantly, and overlay the translation. It also features a "Dictionary Mode" where tapping a word provides its definition.
+AR Translator is a real-time Augmented Reality web application that translates text from your camera feed instantly. It leverages Google Cloud Vision for OCR and Google Cloud Translation API for context-aware translation.
 
-🚀 Features
+Additionally, it features a "Smart Dictionary Mode" that provides definitions for tapped words, handling transliterations (e.g., "bhai" -> "Brother") and multi-language support seamlessly.
 
-Real-time AR Translation: Point your camera at text to see it translated instantly.
+# 🚀 Features
 
-Smart Dictionary: Tap any word on the screen to see its definition.
+Real-time AR Translation: Point your camera at any text to see it translated and overlaid instantly.
+
+Smart Dictionary: Tap any word on the screen to fetch its definition.
 
 Supports English definitions via Merriam-Webster API.
 
-Handles transliterated words (e.g., "bhai" -> "Brother").
+Handles transliterated words 
 
 Provides definitions in the target language (e.g., Hindi definition for English words).
 
 Multi-Language Support: Supports English, Hindi, Spanish, French, and more via Google Cloud.
 
-Mobile Optimized: Full-screen camera view with no scrolling or black bars.
+Mobile Optimized: Full-screen, responsive camera view with no scrolling or black bars.
 
-Secure: Uses a backend proxy to hide API keys.
+Secure Backend: Uses a FastAPI proxy to securely manage API keys.
 
-🛠️ Tech Stack
+# 🛠️ Tech Stack
 
 Frontend: HTML5, CSS3, JavaScript (Native Camera API).
 
 Backend: Python, FastAPI (for API routing).
 
-AI/ML: * Google Cloud Vision API: For Optical Character Recognition (OCR).
+AI/ML Services:
+
+Google Cloud Vision API: For Optical Character Recognition (OCR).
 
 Google Cloud Translation API (V2/V3): For Neural Machine Translation (NMT).
 
 Dictionary: Merriam-Webster Collegiate Dictionary API.
 
-📦 Prerequisites
+Deployment: Docker, Hugging Face Spaces, or any cloud provider (AWS/Render).
 
-Python 3.8+ installed.
+# 📦 Prerequisites
+
+Before running this project, ensure you have the following:
+
+Python 3.10+ installed.
 
 Google Cloud Account with a project enabling:
 
@@ -42,47 +50,50 @@ Cloud Vision API
 
 Cloud Translation API
 
-Merriam-Webster API Key (Free tier is fine).
+Merriam-Webster API Key (Free tier is sufficient).
 
-🔧 Setup & Installation
+Git installed.
+
+# 🔧 Installation & Setup
 
 1. Clone the Repository
 
-git clone [https://github.com/Rohithiwal/ar-translator.git](https://github.com/Rohithiwal/ar-translator.git)
+git clone https://github.com/Rohithiwal/ar-translator.git
 cd ar-translator
 
 
 2. Install Dependencies
+
+Create a virtual environment (optional but recommended) and install required packages:
 
 pip install -r requirements.txt
 
 
 3. Setup Credentials
 
-Google Cloud: Place your credentials.json file in the root directory of the project.
+To run the backend, you need to configure your API keys:
 
-Merriam-Webster: Open main.py and paste your API key into the MW_API_KEY variable.
+Google Cloud:
 
-4. Run the Server
+Download your Service Account Key JSON file from Google Cloud Console.
 
-# Run with Uvicorn
+Rename it to credentials.json and place it in the root directory of the project.
+
+Merriam-Webster:
+
+Open main.py.
+
+# ▶️ Running the Application
+
+Local Development
+
+Start the backend server using Uvicorn:
+
 uvicorn main:app --host 0.0.0.0 --port 8000
 
+The server will start at http://0.0.0.0:8000.
 
-5. Access on Mobile
-
-To use the camera on your phone, you need a secure connection (HTTPS). Use Ngrok to tunnel your localhost.
-
-Install Ngrok.
-
-Run the tunnel:
-
-ngrok http 8000
-
-
-Copy the https://....ngrok-free.dev link and open it on your mobile browser.
-
-📂 Project Structure
+# 📂 Project Structure
 
 main.py: The FastAPI backend handling OCR, translation, and dictionary lookups.
 
@@ -90,12 +101,14 @@ index.html: The frontend UI with camera logic and AR overlay drawing.
 
 requirements.txt: List of Python dependencies.
 
+Dockerfile: Configuration for building the Docker image.
+
 credentials.json: (Ignored by Git) Your Google Cloud service account key.
 
-🤝 Contributing
+# 🤝 Contributing
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-📄 License
+# 📄 License
 
-MIT
+This project is licensed under the MIT License.
