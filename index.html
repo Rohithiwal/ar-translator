@@ -2,145 +2,403 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Translator (Local)</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AR Translator</title>
     <style>
-        /* --- STANDARD STYLES --- */
-        body { 
-            font-family: Arial, sans-serif; 
-            background-color: #111827; /* Dark gray */
-            color: #F3F4F6; /* Light gray */
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh; 
-            padding: 16px; 
-            margin: 0; 
+        /* 1. LOCK VIEWPORT & LAYOUT */
+        html, body {
+            height: 100dvh; 
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; 
+            background-color: #111827;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #F3F4F6;
+            display: flex;
+            flex-direction: column;
+            touch-action: none; /* Prevents default browser scrolling/zooming to handle custom gestures */
         }
-        h1 { 
-            font-size: 2.25rem; 
-            font-weight: bold; 
-            margin-bottom: 1rem; 
+
+        /* 2. HEADER */
+        header {
+            flex: 0 0 auto;
+            padding: 15px 0 5px 0;
+            text-align: center;
+            background-color: #111827;
+            z-index: 10;
         }
-        .subtitle {
-            color: #9CA3AF; 
-            margin-bottom: 20px; 
-            font-size: 1rem; 
-        }
-        #toggleButton { 
-            background-color: #10B981; /* Green */
-            color: white; 
-            font-size: 1rem; 
-            font-weight: bold; 
-            padding: 0.75rem 1.5rem; 
-            border: none; 
-            border-radius: 0.5rem; 
-            cursor: pointer; 
-            margin-bottom: 1rem; 
-            transition: background-color 0.2s; 
-        }
-        #toggleButton:hover { background-color: #059669; }
-        #toggleButton.stop { background-color: #EF4444; /* Red */ }
-        #toggleButton.stop:hover { background-color: #DC2626; }
-        
-        #canvas-container { 
-            width: 100%; 
-            max-width: 896px; 
-            margin: 0 auto; 
-            padding: 8px; 
-            background-color: #1F2937; /* Gray 800 */
-            border-radius: 0.5rem; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-        }
-        canvas { 
-            max-width: 100%; 
-            width: 100%; 
-            height: auto; 
-            border-radius: 0.5rem; 
+        h1 { font-size: 1.6rem; margin: 0; }
+        .subtitle { color: #9CA3AF; font-size: 0.85rem; }
+
+        /* 3. MAIN CAMERA AREA */
+        main {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
             background-color: #000;
+            overflow: hidden;
         }
-        #status { 
-            margin-top: 1rem; 
-            font-size: 1.125rem; 
-            color: #FCD34D; /* Yellow 400 */
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain; 
+        }
+
+        /* 4. FOOTER CONTROLS */
+        footer {
+            flex: 0 0 auto;
+            padding: 10px 20px 30px 20px;
+            background-color: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .controls-row { display: flex; gap: 15px; align-items: center; justify-content: center; width: 100%; }
+        .lang-group { display: flex; flex-direction: column; align-items: flex-start; }
+        label { font-size: 0.75rem; color: #aaa; margin-bottom: 2px; margin-left: 4px; }
+        select { padding: 8px 12px; border-radius: 8px; background: #1F2937; color: white; border: 1px solid #374151; font-size: 1rem; width: 100%;}
+
+        /* --- BUTTON GROUP STYLES --- */
+        .button-container {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            justify-content: center;
+            max-width: 400px;
+            margin-top: 10px;
+        }
+
+        #toggleButton { 
+            background-color: #10B981; color: white; font-size: 1.1rem; 
+            padding: 14px 0; border: none; border-radius: 30px; 
+            cursor: pointer; font-weight: 600; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            flex: 1; 
+        }
+        #toggleButton:active { transform: scale(0.95); }
+        #toggleButton.stop { background-color: #EF4444; }
+        
+        /* Freeze Button */
+        #freezeButton {
+            background-color: #3B82F6; 
+            color: white;
+            font-size: 1.1rem;
+            padding: 14px 0;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            flex: 1; 
+        }
+        #freezeButton:active { transform: scale(0.95); }
+        #freezeButton:disabled {
+            background-color: #374151;
+            color: #6B7280;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #freezeButton.active {
+            background-color: #F59E0B; 
+        }
+
+        #status { font-size: 0.9rem; color: #FCD34D; margin: 0; }
         video { display: none; }
+
+        /* Modal */
+        #modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
+        .modal-content { background-color: #1F2937; padding: 25px; border: 1px solid #374151; border-radius: 16px; width: 85%; max-width: 350px; color: #fff; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; margin-top: -10px; }
+        #def-word { color: #3b82f6; font-weight: bold; font-size: 1.4rem; margin-bottom: 10px; }
+        #def-text { margin-top: 10px; line-height: 1.5; color: #D1D5DB; text-align: left; max-height: 200px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-    <h1>AR Translator</h1>
-    <div class="subtitle">Running Locally with Google AI</div>
-    
-    <button id="toggleButton">Start Camera</button>
-    
-    <div id="canvas-container">
-        <canvas id="canvas"></canvas>
-    </div>
-    
-    <p id="status">Click "Start Camera" to begin.</p>
+    <header>
+        <h1>AR Translator</h1>
+        <div class="subtitle">Tap text for definitions</div>
+    </header>
+
+    <main id="main-area">
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+    </main>
+
+    <footer>
+        <p id="status">Ready to start.</p>
+        
+        <div class="controls-row">
+            <div class="lang-group">
+                <label>Detect:</label>
+                <select id="sourceLang">
+                    <option value="auto">Auto</option>
+                    <option value="hi">Hindi</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                </select>
+            </div>
+            <div class="lang-group">
+                <label>Translate to:</label>
+                <select id="targetLang">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button id="freezeButton" disabled>Freeze</button>
+            <button id="toggleButton">Start Camera</button>
+        </div>
+    </footer>
     
     <video id="video" playsinline autoplay muted></video>
 
+    <div id="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="def-word">Word</p>
+            <p id="def-text">Definition goes here...</p>
+        </div>
+    </div>
+
     <script>
-        // --- CONFIGURATION ---
-        const BACKEND_URL = window.location.origin + "/translate/"; 
+        const BACKEND_URL = window.location.origin; 
         const PROCESSING_WIDTH = 800; 
         const PROCESS_EVERY_N_FRAMES = 30;
+        const BOX_COLOR = "rgba(0, 0, 0, 0.7)"; 
+        const TEXT_COLOR = "#FFFFFF"; 
         
-        // --- VISUAL CONFIGURATION ---
-        const BOX_COLOR = "#000000"; // SOLID BLACK
-        const TEXT_COLOR = "#ffffff"; // White text
-        const BASE_FONT_SIZE = 24;
-        
-        // --- VARIABLES ---
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const statusEl = document.getElementById('status');
-        const toggleButton = document.getElementById('toggleButton');
+        const mainArea = document.getElementById('main-area'); // For touch events
         
+        const toggleButton = document.getElementById('toggleButton');
+        const freezeButton = document.getElementById('freezeButton');
+        
+        const sourceLangSelect = document.getElementById('sourceLang');
+        const targetLangSelect = document.getElementById('targetLang');
+        
+        const modal = document.getElementById('modal');
+        const closeModal = document.getElementsByClassName("close")[0];
+        const defWord = document.getElementById('def-word');
+        const defText = document.getElementById('def-text');
+
         let frameCount = 0;
-        let lastResults = [];
+        let lastResults = { translations: [], words: [] }; 
         let isProcessing = false;
         let currentStream = null;
         let animationFrameId = null;
+        let isFrozen = false;
+        
+        // Zoom Variables
+        let videoTrack = null; 
+        let zoomCapabilities = null;
+        let currentZoom = 1;
+        let pinchStartDist = 0;
+        let isPinching = false;
 
-        // --- EVENT LISTENERS ---
+        // --- TOUCH / PINCH ZOOM HANDLERS ---
+        mainArea.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                isPinching = true;
+                // Calculate initial distance between two fingers
+                pinchStartDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+            }
+        });
+
+        mainArea.addEventListener('touchmove', (e) => {
+            if (isPinching && e.touches.length === 2 && videoTrack && zoomCapabilities) {
+                e.preventDefault(); // Prevent screen scrolling
+                
+                const newDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+
+                // Sensitivity factor: how fast it zooms per pixel moved
+                const sensitivity = 0.01; 
+                const delta = (newDist - pinchStartDist) * sensitivity;
+                
+                let newZoom = currentZoom + delta;
+                
+                // Clamp to min/max
+                newZoom = Math.min(Math.max(newZoom, zoomCapabilities.min), zoomCapabilities.max);
+                
+                // Only apply if changed significantly to save performance
+                if (Math.abs(newZoom - currentZoom) > 0.1) {
+                    currentZoom = newZoom;
+                    videoTrack.applyConstraints({ advanced: [{ zoom: currentZoom }] })
+                        .catch(err => console.log("Zoom error", err));
+                    
+                    // Reset start dist for smoother continuous zooming
+                    pinchStartDist = newDist; 
+                }
+            }
+        });
+
+        mainArea.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isPinching = false;
+            }
+        });
+
+
+        // --- CLICK HANDLER (For Text) ---
+        // We attach this to canvas, but verify it wasn't a pinch
+        canvas.addEventListener('click', async (event) => {
+            if (isPinching) return; // Don't click if zooming
+            if (!lastResults.words || lastResults.words.length === 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const realClickX = clickX * scaleX;
+            const realClickY = clickY * scaleY;
+
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            const vRatio = vw / vh;
+            const apiH = PROCESSING_WIDTH / vRatio;
+            const apiScaleX = canvas.width / PROCESSING_WIDTH;
+            const apiScaleY = canvas.height / apiH;
+
+            for (const wordObj of lastResults.words) {
+                const wx = wordObj.tl[0] * apiScaleX;
+                const wy = wordObj.tl[1] * apiScaleY;
+                const ww = (wordObj.br[0] - wordObj.tl[0]) * apiScaleX;
+                const wh = (wordObj.br[1] - wordObj.tl[1]) * apiScaleY;
+
+                if (realClickX >= wx && realClickX <= wx + ww && 
+                    realClickY >= wy && realClickY <= wy + wh) {
+                    showDefinition(wordObj.text);
+                    return;
+                }
+            }
+        });
+
+        async function showDefinition(word) {
+            defWord.innerText = word; 
+            defText.innerHTML = "Loading..."; 
+            modal.style.display = "flex"; 
+            
+            const tLang = targetLangSelect.value; 
+            const sLang = sourceLangSelect.value; 
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/define/?word=${word}&target_lang=${tLang}&source_lang=${sLang}`, {
+                     headers: { "ngrok-skip-browser-warning": "true" }
+                });
+                const data = await res.json();
+                defText.innerHTML = data.definition; 
+            } catch (e) {
+                console.error(e);
+                defText.innerText = "Error fetching definition.";
+            }
+        }
+
+        closeModal.onclick = function() { modal.style.display = "none"; }
+        window.onclick = function(event) { if (event.target == modal) modal.style.display = "none"; }
+
+        // --- TOGGLE CAMERA ---
         toggleButton.addEventListener('click', () => {
             if (currentStream) stopWebcam();
             else startWebcam();
         });
 
-        // --- WEBCAM LOGIC ---
+        // --- FREEZE BUTTON HANDLER ---
+        freezeButton.addEventListener('click', () => {
+            isFrozen = !isFrozen;
+            if (isFrozen) {
+                freezeButton.innerText = "Unfreeze";
+                freezeButton.classList.add("active");
+                statusEl.innerText = "Paused. Tap words to read.";
+            } else {
+                freezeButton.innerText = "Freeze";
+                freezeButton.classList.remove("active");
+                statusEl.innerText = "Active";
+            }
+        });
+
         async function startWebcam() {
             try {
                 statusEl.innerText = "Requesting camera...";
                 
-                // Use 'environment' for rear camera on phones
-                currentStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 1280 }, facingMode: 'environment' }
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 3840 }, 
+                        height: { ideal: 2160 },
+                        facingMode: 'environment' 
+                    } 
                 });
                 
                 video.srcObject = currentStream;
                 video.oncanplay = () => video.play();
                 
                 video.onloadedmetadata = () => {
-                    // Resize canvas to match video aspect ratio
-                    const aspectRatio = video.videoHeight / video.videoWidth;
-                    canvas.width = PROCESSING_WIDTH;
-                    canvas.height = PROCESSING_WIDTH * aspectRatio;
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
                     
                     statusEl.innerText = "Scanning...";
-                    toggleButton.innerText = "Stop Camera";
+                    toggleButton.innerText = "Stop";
                     toggleButton.classList.add("stop");
+
+                    freezeButton.disabled = false;
+                    freezeButton.innerText = "Freeze";
+                    freezeButton.classList.remove("active");
+                    isFrozen = false;
                     
-                    processFrame(); 
+                    // --- CONFIGURE ZOOM CAPABILITIES ---
+                    videoTrack = currentStream.getVideoTracks()[0];
+                    const capabilities = videoTrack.getCapabilities();
+                    
+                    if ('zoom' in capabilities) {
+                        zoomCapabilities = capabilities.zoom;
+                        const settings = videoTrack.getSettings();
+                        currentZoom = settings.zoom || capabilities.zoom.min;
+                    } else {
+                        zoomCapabilities = null;
+                        console.log("Zoom not supported on this device/browser.");
+                    }
+
+                    processFrame();
                 };
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = "Error: " + err.name + " (Check HTTPS)";
+                statusEl.innerText = "Error: " + err.name;
             }
         }
 
@@ -148,91 +406,102 @@
             if (!currentStream) return;
             currentStream.getTracks().forEach(track => track.stop());
             currentStream = null;
+            videoTrack = null;
+            zoomCapabilities = null;
+            
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             
-            // Clear canvas to black
-            ctx.fillStyle = "#000";
+            ctx.fillStyle = "#111";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
             statusEl.innerText = "Stopped.";
             toggleButton.innerText = "Start Camera";
             toggleButton.classList.remove("stop");
+
+            freezeButton.disabled = true;
+            freezeButton.innerText = "Freeze";
+            freezeButton.classList.remove("active");
+            isFrozen = false;
         }
 
-        // --- MAIN LOOP ---
         function processFrame() {
             if (!currentStream) return;
+
+            if (isFrozen) {
+                animationFrameId = requestAnimationFrame(processFrame);
+                return;
+            }
 
             if (video.readyState < 2 || video.paused) {
                 animationFrameId = requestAnimationFrame(processFrame);
                 return;
             }
-
-            // Draw video to canvas
+            
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
             frameCount++;
             if (frameCount % PROCESS_EVERY_N_FRAMES === 0 && !isProcessing) {
-                getTranslation();
+                const tempCanvas = document.createElement('canvas');
+                const vRatio = video.videoWidth / video.videoHeight;
+                tempCanvas.width = PROCESSING_WIDTH;
+                tempCanvas.height = PROCESSING_WIDTH / vRatio;
+                tempCanvas.getContext('2d').drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                getTranslation(tempCanvas);
             }
-
             drawResults();
             animationFrameId = requestAnimationFrame(processFrame);
         }
 
-        // --- API CALL ---
-        async function getTranslation() {
+        async function getTranslation(sourceCanvas) {
             isProcessing = true;
             statusEl.innerText = "Translating...";
-            
             try {
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+                const blob = await new Promise(resolve => sourceCanvas.toBlob(resolve, 'image/jpeg', 0.8));
                 const formData = new FormData();
-                formData.append("file", blob, "frame.jpg");
-                
-                // --- NGROK & CORS FIX ---
-                const response = await fetch(BACKEND_URL, { 
+                formData.append("file", blob, "frame.png");
+                formData.append("target_lang", targetLangSelect.value);
+                formData.append("source_lang", sourceLangSelect.value);
+
+                const response = await fetch(`${BACKEND_URL}/translate/`, { 
                     method: "POST", 
                     body: formData,
-                    headers: {
-                        "ngrok-skip-browser-warning": "true",
-                        "Accept": "application/json"
-                    },
-                    // 'cors' mode is default but good to be explicit
-                    mode: 'cors' 
+                    headers: { "ngrok-skip-browser-warning": "true" }
                 });
                 
-                if (!response.ok) throw new Error(`Server: ${response.status}`);
-                
+                if (!response.ok) throw new Error(`Server Error`);
                 const results = await response.json();
                 if (results.error) throw new Error(results.error);
                 
-                lastResults = results;
+                lastResults = results; 
                 if (currentStream) statusEl.innerText = "Active";
-                
             } catch (err) {
-                console.error("Translation Error:", err);
-                // If error, keep trying silently or show brief message
+                console.error(err);
                 if (currentStream) statusEl.innerText = "Retrying...";
             } finally {
                 isProcessing = false;
             }
         }
 
-        // --- DRAWING ---
         function drawResults() {
-            for (const res of lastResults) {
-                const x = res.tl[0];
-                const y = res.tl[1];
-                const w = res.br[0] - res.tl[0];
-                const h = res.br[1] - res.tl[1];
+            if (!lastResults.translations) return;
+            
+            const vRatio = video.videoWidth / video.videoHeight;
+            const apiH = PROCESSING_WIDTH / vRatio;
+            const scaleX = canvas.width / PROCESSING_WIDTH;
+            const scaleY = canvas.height / apiH;
 
-                // Draw Box (Solid Black)
+            for (const res of lastResults.translations) {
+                const x = res.tl[0] * scaleX;
+                const y = res.tl[1] * scaleY;
+                const w = (res.br[0] - res.tl[0]) * scaleX;
+                const h = (res.br[1] - res.tl[1]) * scaleY;
+
                 ctx.fillStyle = BOX_COLOR;
                 ctx.fillRect(x, y, w, h);
+                
+                let startSize = Math.min(h * 0.8, 120); 
+                if (startSize < 20) startSize = 20;
 
-                // Draw Text (Scaled)
-                drawScaledWrappedText(ctx, res.text, x, y, w, h, BASE_FONT_SIZE);
+                drawScaledWrappedText(ctx, res.text, x, y, w, h, startSize);
             }
         }
 
@@ -240,18 +509,22 @@
             if (maxHeight < 10 || maxWidth < 10) return;
             let fontSize = initialFontSize;
             let lines = [];
+            const padding = 4;
 
-            // Find best font size
-            do {
+            while (fontSize > 6) {
                 context.font = `bold ${fontSize}px Arial`;
                 lines = [];
                 const words = text.split(' ');
                 let currentLine = words[0];
+                let allWordsFit = true;
+
+                if (context.measureText(currentLine).width > maxWidth - (padding*2)) allWordsFit = false;
 
                 for (let i = 1; i < words.length; i++) {
                     const word = words[i];
+                    if (context.measureText(word).width > maxWidth - (padding*2)) { allWordsFit = false; break; }
                     const width = context.measureText(currentLine + " " + word).width;
-                    if (width < maxWidth - 8) { 
+                    if (width < maxWidth - (padding * 2)) { 
                         currentLine += " " + word;
                     } else {
                         lines.push(currentLine);
@@ -260,25 +533,25 @@
                 }
                 lines.push(currentLine);
 
+                if (!allWordsFit) { fontSize -= 2; continue; }
+
                 const lineHeight = fontSize * 1.2;
                 const totalHeight = lines.length * lineHeight;
 
-                if (totalHeight <= maxHeight - 4) break; 
+                if (totalHeight <= maxHeight - (padding * 2)) break; 
                 fontSize -= 2;
-            } while (fontSize > 10); 
+            }
 
-            // Draw text centered vertically
             context.fillStyle = TEXT_COLOR;
-            context.textBaseline = "top";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            
             const lineHeight = fontSize * 1.2;
-            let currentY = y + (maxHeight - (lines.length * lineHeight)) / 2; 
+            const totalHeight = lines.length * lineHeight;
+            let currentY = y + (maxHeight / 2) - (totalHeight / 2) + (lineHeight / 2);
 
             for (let i = 0; i < lines.length; i++) {
-                // Draw text centered horizontally
-                const lineWidth = context.measureText(lines[i]).width;
-                const currentX = x + (maxWidth - lineWidth) / 2;
-                
-                context.fillText(lines[i], currentX, currentY);
+                context.fillText(lines[i], x + (maxWidth / 2), currentY);
                 currentY += lineHeight;
             }
         }

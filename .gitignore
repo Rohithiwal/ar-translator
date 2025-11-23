@@ -3,6 +3,8 @@ credentials.json
 .env
 keys/
 secrets/
+server.txt
+generate_qr.py
 
 --- Python ---
 

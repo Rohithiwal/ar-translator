@@ -1,0 +1,24 @@
+steps : # To run on mobile
+ssh -i "ar-key.pem" ubuntu@54.167.158.254
+#activate the env
+source /opt/pytorch/bin/activate
+cd ar-translator
+ngrok config add-authtoken 35eK4J225M0G0mFr5y0knlKdD6t_4vLLAQvK3Q6zrfjzi3Uxe
+nohup uvicorn main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
+.\ngrok http 8000
+
+git pull
+sudo fuser -k 8000/tcp (to kill the existing server)
+uvicorn main:app --host 0.0.0.0 --port 8000 
+http://54.167.158.254:8000
+
+
+
+
+
+
+
+
+
+https://subeffectively-premegalithic-karlee.ngrok-free.dev -> http://localhost:8000
+(To stop everything later: Press Ctrl+C to stop Ngrok, and pkill uvicorn to stop your Python server).
