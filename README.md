@@ -1,4 +1,4 @@
-AR Translator
+# AR Translator
 
 A real-time Augmented Reality translation web app that uses your camera to detect text, translate it instantly, and overlay the translation. It also features a "Dictionary Mode" where tapping a word provides its definition.
 
