@@ -11,28 +11,42 @@ from google.oauth2 import service_account
 
 
 # --- AUTHENTICATION ---
+creds_json_str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-creds_json_str = os.environ['GOOGLE_APPLICATION_CREDENTIALS'] 
+vision_client = None
+translate_client = None
 
-if creds_json_str:
-    # Create credentials object from the secret JSON string
-    creds_dict = json.loads(creds_json_str)
-    credentials = service_account.Credentials.from_service_account_info(creds_dict)
-    print("Credentials loaded from Environment Secret.")
-else:
-    # Fallback for local testing
-    print("Warning: GOOGLE_APPLICATION_CREDENTIALS secret not found. Trying local file.")
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'credentials.json'
-    credentials = None # Client libraries will look for env var automatically
-
-# Initialize Clients
 print("Initializing Google Cloud Clients...")
+
 try:
-    vision_client = vision.ImageAnnotatorClient()
-    translate_client = translate.Client()
-    print("SUCCESS: Google Clients are ready.")
+    if creds_json_str:
+        # --- PRODUCTION (Hugging Face) ---
+        print("Found GOOGLE_APPLICATION_CREDENTIALS secret. Parsing JSON...")
+        try:
+            creds_dict = json.loads(creds_json_str)
+            credentials = service_account.Credentials.from_service_account_info(creds_dict)
+            
+            # PASS CREDENTIALS DIRECTLY TO CLIENTS
+            vision_client = vision.ImageAnnotatorClient(credentials=credentials)
+            translate_client = translate.Client(credentials=credentials)
+            print("SUCCESS: Google Clients initialized with Secret.")
+            
+        except json.JSONDecodeError as e:
+             print(f"CRITICAL ERROR: Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS secret. {e}")
+    else:
+        # --- LOCAL FALLBACK ---
+        print("No Secret found. Looking for local 'credentials.json' file...")
+        if os.path.exists('credentials.json'):
+             os.environ['GOOGLE_CREDENTIALS'] = 'credentials.json'
+             print("No such local file exist")
+             vision_client = vision.ImageAnnotatorClient()
+             translate_client = translate.Client()
+             print("SUCCESS: Google Clients initialized with local file.")
+        else:
+             print("CRITICAL ERROR: No credentials found (Env var or local file missing).")
+
 except Exception as e:
-    print(f"CRITICAL ERROR: {e}")
+    print(f"CRITICAL ERROR Initializing Clients: {e}")
 
 app = FastAPI()
 
